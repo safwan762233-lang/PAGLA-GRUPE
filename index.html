@@ -1,0 +1,322 @@
+
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔥 পাগলা গ্রুপ 🔥 | Public News, Reels & Call</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+:root{--bg:url('')}
+*{box-sizing:border-box;font-family:sans-serif}
+body{
+margin:0;color:#fff;
+background:
+linear-gradient(rgba(0,0,0,.6),rgba(0,0,0,.6)),
+var(--bg),
+linear-gradient(135deg,#ff0080,#7928ca,#2afadf);
+background-size:cover;background-attachment:fixed;
+}
+header{
+padding:15px;text-align:center;font-size:28px;font-weight:bold;
+background:rgba(0,0,0,.75);position:sticky;top:0;z-index:10;
+}
+header span{color:yellow;text-shadow:0 0 15px red}
+nav{display:flex;justify-content:space-around;background:#000;padding:10px}
+nav button{
+border:none;border-radius:20px;padding:10px 14px;
+background:linear-gradient(45deg,orange,red,purple);
+color:#fff;font-weight:bold
+}
+.section{display:none;padding:10px}
+.active{display:block}
+
+/* welcome */
+#welcome{
+position:fixed;inset:0;z-index:9999;background:#000;
+display:flex;align-items:center;justify-content:center;
+}
+#welcome h1{
+color:red;font-size:32px;text-align:center;
+animation:pulse 1s infinite alternate;
+}
+@keyframes pulse{to{transform:scale(1.1)}}
+
+/* posts */
+.post{background:rgba(0,0,0,.65);border-radius:15px;padding:10px;margin:10px 0}
+.post img,.post video{width:100%;border-radius:10px}
+
+/* reels */
+#reels{height:80vh;overflow-y:auto;scroll-snap-type:y mandatory}
+.reel{height:80vh;scroll-snap-align:start}
+.reel video{width:100%;height:100%;object-fit:cover}
+
+/* call */
+.callWrap{background:rgba(0,0,0,.7);border-radius:20px;padding:10px}
+#videos{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+video{width:100%;background:#000;border-radius:10px}
+.callBtns{display:flex;justify-content:space-around;margin-top:10px}
+.callBtns button{border:none;border-radius:50%;width:55px;height:55px;font-size:20px}
+.end{background:red;color:#fff}
+.green{background:#25D366;color:#000}
+
+/* incoming call */
+#incoming{
+position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.9);
+display:none;align-items:center;justify-content:center;text-align:center;
+}
+#incoming button{
+margin:10px;padding:15px 28px;border:none;border-radius:30px;font-size:18px
+}
+.accept{background:#25D366}
+.reject{background:red;color:#fff}
+
+/* admin + theme */
+.box{
+max-width:360px;margin:40px auto;background:#fff;color:#000;
+padding:20px;border-radius:10px;text-align:center
+}
+.box h2{color:#1877f2}
+.box input,.box textarea{
+width:100%;padding:12px;border-radius:6px;border:1px solid #ddd;margin:6px 0
+}
+.fb-btn{
+width:100%;background:#1877f2;color:#fff;
+border:none;padding:12px;border-radius:6px;font-size:16px;font-weight:bold
+}
+</style>
+</head>
+<body>
+
+<div id="welcome" onclick="this.style.display='none'">
+<h1>কিরে বোকাচোদা কেন ঢুকছি এখানে 😁🖕🖕🖕</h1>
+</div>
+
+<header>🔥 <span>পাগলা গ্রুপ</span> 🔥</header>
+
+<nav>
+<button onclick="show('feed')">📰 পোস্ট</button>
+<button onclick="show('reels')">🎬 রিলস</button>
+<button onclick="show('call')">📞 কল</button>
+<button onclick="show('admin')">👑 এডমিন</button>
+<button onclick="show('theme')">🎨 থিম</button>
+</nav>
+
+<div id="feed" class="section active"></div>
+<div id="reels" class="section"></div>
+
+<div id="call" class="section">
+<div class="callWrap">
+<div id="videos">
+<video id="localVideo" autoplay muted playsinline></video>
+</div>
+<div class="callBtns">
+<button class="green" onclick="startCall()">📞</button>
+<button onclick="toggleAudio()">🎤</button>
+<button onclick="toggleVideo()">🎥</button>
+<button onclick="shareScreen()">🖥️</button>
+<button class="end" onclick="endCall()">❌</button>
+</div>
+</div>
+</div>
+
+<div id="admin" class="section">
+<div class="box">
+<h2>👑 Admin Panel</h2>
+<input id="key" type="password" placeholder="Admin Password">
+<textarea id="text" placeholder="What's on your mind?"></textarea>
+<input type="file" id="file">
+<button class="fb-btn" onclick="post()">Post</button>
+</div>
+</div>
+
+<div id="theme" class="section">
+<div class="box">
+<h2>🎨 Change Theme</h2>
+<input type="file" accept="image/*" onchange="setTheme(this.files[0])">
+</div>
+</div>
+
+<div id="incoming">
+<div>
+<h2>📞 Incoming Call<br>🔥 পাগলা গ্রুপ</h2>
+<button class="accept" onclick="acceptCall()">Accept</button>
+<button class="reject" onclick="rejectCall()">Reject</button>
+</div>
+</div>
+
+<audio id="ringtone" loop>
+<source src="https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg">
+</audio>
+
+<script>
+/* Firebase */
+firebase.initializeApp({
+apiKey:"AIzaSyC1aKVyWRX8beLO-41QgbmkpkfQOCDiJUA",
+authDomain:"pagla-grupe.firebaseapp.com",
+databaseURL:"https://pagla-grupe-default-rtdb.firebaseio.com",
+projectId:"pagla-grupe",
+storageBucket:"pagla-grupe.appspot.com",
+messagingSenderId:"592654274515",
+appId:"1:592654274515:web:a3c56d5857bc44045f2926"
+});
+const db=firebase.database();
+
+/* config */
+const ADMIN_KEY="safwan762233";
+const room="public-room";
+
+/* UI */
+function show(id){
+document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+}
+
+/* posts */
+function post(){
+if(key.value!==ADMIN_KEY)return;
+const f=file.files[0]; if(!f)return;
+const r=new FileReader();
+r.onload=e=>{
+db.ref("posts").push({
+text:text.value,
+media:e.target.result,
+type:f.type.startsWith("video")?"video":"image"
+});
+};
+r.readAsDataURL(f);
+}
+db.ref("posts").on("child_added",s=>{
+const p=s.val();
+const d=document.createElement("div");
+d.className="post";
+d.innerHTML=`<h3>🔥 পাগলা গ্রুপ</h3><p>${p.text}</p>
+${p.type==="video"?`<video src="${p.media}" controls></video>`:`<img src="${p.media}">`}`;
+feed.prepend(d);
+if(p.type==="video"){
+const r=document.createElement("div");
+r.className="reel";
+r.innerHTML=`<video src="${p.media}" controls loop></video>`;
+reels.prepend(r);
+}
+});
+
+/* CALL SYSTEM – FIXED VIDEO + SCREEN SHARE */
+let localStream, pc, videoSender;
+const ring=document.getElementById("ringtone");
+
+async function getMedia(){
+localStream=await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+localVideo.srcObject=localStream;
+}
+
+async function startCall(){
+await getMedia();
+db.ref("calls/"+room+"/ring").set(Date.now());
+
+pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
+
+localStream.getTracks().forEach(t=>{
+const sender=pc.addTrack(t,localStream);
+if(t.kind==="video") videoSender=sender;
+});
+
+pc.ontrack=e=>{
+const v=document.createElement("video");
+v.srcObject=e.streams[0];
+v.autoplay=true;
+v.playsInline=true;
+videos.appendChild(v);
+};
+
+pc.onicecandidate=e=>{
+if(e.candidate)db.ref("calls/"+room+"/candidates").push(JSON.stringify(e.candidate));
+};
+
+const offer=await pc.createOffer();
+await pc.setLocalDescription(offer);
+db.ref("calls/"+room+"/offer").set(JSON.stringify(offer));
+}
+
+db.ref("calls/"+room+"/ring").on("value",s=>{
+if(s.val()){ring.play();incoming.style.display="flex";}
+});
+
+async function acceptCall(){
+ring.pause();incoming.style.display="none";
+await getMedia();
+
+pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
+localStream.getTracks().forEach(t=>{
+const sender=pc.addTrack(t,localStream);
+if(t.kind==="video") videoSender=sender;
+});
+pc.ontrack=e=>{
+const v=document.createElement("video");
+v.srcObject=e.streams[0];
+v.autoplay=true;
+videos.appendChild(v);
+};
+
+pc.onicecandidate=e=>{
+if(e.candidate)db.ref("calls/"+room+"/candidates").push(JSON.stringify(e.candidate));
+};
+
+const offer=JSON.parse((await db.ref("calls/"+room+"/offer").get()).val());
+await pc.setRemoteDescription(offer);
+const ans=await pc.createAnswer();
+await pc.setLocalDescription(ans);
+db.ref("calls/"+room+"/answer").set(JSON.stringify(ans));
+}
+
+db.ref("calls/"+room+"/answer").on("value",async s=>{
+if(pc && s.val() && !pc.currentRemoteDescription){
+await pc.setRemoteDescription(JSON.parse(s.val()));
+}
+});
+
+db.ref("calls/"+room+"/candidates").on("child_added",s=>{
+if(pc)pc.addIceCandidate(new RTCIceCandidate(JSON.parse(s.val())));
+});
+
+function rejectCall(){
+ring.pause();incoming.style.display="none";
+db.ref("calls/"+room).remove();
+}
+
+function toggleAudio(){
+localStream.getAudioTracks().forEach(t=>t.enabled=!t.enabled);
+}
+function toggleVideo(){
+localStream.getVideoTracks().forEach(t=>t.enabled=!t.enabled);
+}
+
+/* FIXED SCREEN SHARE */
+async function shareScreen(){
+const screen=await navigator.mediaDevices.getDisplayMedia({video:true});
+const track=screen.getVideoTracks()[0];
+videoSender.replaceTrack(track);
+track.onended=()=>videoSender.replaceTrack(localStream.getVideoTracks()[0]);
+}
+
+function endCall(){
+if(pc)pc.close();
+db.ref("calls/"+room).remove();
+}
+
+/* theme */
+function setTheme(file){
+const r=new FileReader();
+r.onload=e=>{
+document.documentElement.style.setProperty("--bg",`url(${e.target.result})`);
+};
+r.readAsDataURL(file);
+}
+</script>
+</body>
+</html>
